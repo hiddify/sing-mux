@@ -19,6 +19,7 @@ const (
 	ProtocolSmux = iota
 	ProtocolYAMux
 	ProtocolH2Mux
+	ProtocolRMux
 )
 
 const (

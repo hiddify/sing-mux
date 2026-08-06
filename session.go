@@ -8,6 +8,7 @@ import (
 
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/smux"
+	"github.com/shtorm-7/rmux"
 
 	"github.com/hashicorp/yamux"
 )
@@ -42,6 +43,12 @@ func newClientSession(conn net.Conn, protocol byte) (abstractSession, error) {
 			return nil, err
 		}
 		return &yamuxSession{client}, nil
+	case ProtocolRMux:
+		client, err := rmux.Client(conn, rmuxConfig())
+		if err != nil {
+			return nil, err
+		}
+		return &rmuxSession{client}, nil
 	default:
 		return nil, E.New("unexpected protocol ", protocol)
 	}
@@ -64,6 +71,12 @@ func newServerSession(conn net.Conn, protocol byte) (abstractSession, error) {
 			return nil, err
 		}
 		return &yamuxSession{client}, nil
+	case ProtocolRMux:
+		client, err := rmux.Server(conn, rmuxConfig())
+		if err != nil {
+			return nil, err
+		}
+		return &rmuxSession{client}, nil
 	default:
 		return nil, E.New("unexpected protocol ", protocol)
 	}
@@ -137,6 +150,30 @@ func (w *yamuxWrapStream) Upstream() any {
 
 func smuxConfig() *smux.Config {
 	config := smux.DefaultConfig()
+	config.KeepAliveDisabled = true
+	return config
+}
+
+var _ abstractSession = (*rmuxSession)(nil)
+
+type rmuxSession struct {
+	*rmux.Session
+}
+
+func (s *rmuxSession) Open() (net.Conn, error) {
+	return s.OpenStream()
+}
+
+func (s *rmuxSession) Accept() (net.Conn, error) {
+	return s.AcceptStream()
+}
+
+func (s *rmuxSession) CanTakeNewRequest() bool {
+	return true
+}
+
+func rmuxConfig() *rmux.Config {
+	config := rmux.DefaultConfig()
 	config.KeepAliveDisabled = true
 	return config
 }

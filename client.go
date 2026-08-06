@@ -87,6 +87,8 @@ func NewClient(options Options) (*Client, error) {
 		client.protocol = ProtocolSmux
 	case "yamux":
 		client.protocol = ProtocolYAMux
+	case "rmux":
+		client.protocol = ProtocolRMux
 	default:
 		return nil, E.New("unknown protocol: " + options.Protocol)
 	}
@@ -101,7 +103,7 @@ func (c *Client) DialContext(ctx context.Context, network string, destination M.
 			return nil, err
 		}
 		conn := &clientConn{Conn: stream, destination: destination}
-		if c.protocol == ProtocolH2Mux || c.protocol == ProtocolYAMux {
+		if c.protocol == ProtocolH2Mux || c.protocol == ProtocolYAMux || c.protocol == ProtocolRMux {
 			return &clientConnWithCloseWrite{clientConn: conn}, nil
 		}
 		return conn, nil
@@ -154,7 +156,7 @@ func (c *Client) openStream(ctx context.Context) (net.Conn, error) {
 	if yamuxStream, ok := stream.(*yamux.Stream); ok {
 		return &yamuxWrapStream{Stream: yamuxStream, onClose: onClose}, nil
 	}
-	if c.protocol == ProtocolH2Mux {
+	if c.protocol == ProtocolH2Mux || c.protocol == ProtocolRMux {
 		wrapped := newWrapStreamCloseWrite(stream)
 		wrapped.onClose = onClose
 		return wrapped, nil

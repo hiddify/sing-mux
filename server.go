@@ -12,6 +12,7 @@ import (
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
 	"github.com/sagernet/sing/common/task"
+	"github.com/shtorm-7/rmux"
 )
 
 // Deprecated: Use ServiceHandlerEx instead.
@@ -114,6 +115,8 @@ func (s *Service) newConnection(ctx context.Context, conn net.Conn, source M.Soc
 func (s *Service) newSession(ctx context.Context, sessionConn net.Conn, stream net.Conn, source M.Socksaddr) error {
 	if yamuxStream, ok := stream.(*yamux.Stream); ok {
 		stream = &yamuxWrapStream{Stream: yamuxStream}
+	} else if _, ok := stream.(*rmux.Stream); ok {
+		stream = newWrapStreamCloseWrite(stream)
 	} else {
 		stream = &wrapStream{Conn: stream}
 	}
